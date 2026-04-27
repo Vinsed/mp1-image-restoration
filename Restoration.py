@@ -13,14 +13,12 @@ def pad_image(image, pad_h, pad_w=None):
         pad_w = pad_h
     return np.pad(image, ((pad_h, pad_h), (pad_w, pad_w)), mode='edge')
 
-
 def convolve2d(image, kernel):
     """Konvolusi 2D manual via sliding_window_view (tanpa loop)."""
     kH, kW  = kernel.shape
     padded  = pad_image(image.astype(np.float64), kH // 2, kW // 2)
     windows = sliding_window_view(padded, (kH, kW))
     return np.clip(np.sum(windows * kernel, axis=(2, 3)), 0, 255).astype(np.uint8)
-
 
 # ===========================================================
 # LANGKAH 1 — DENOISING
@@ -33,51 +31,26 @@ def median_filter(channel, k=7):
     windows = sliding_window_view(padded, (k, k))
     return np.median(windows, axis=(2, 3)).astype(np.uint8)
 
-
 def gaussian_kernel(size=5, sigma=1.0):
     ax     = np.arange(-(size // 2), size // 2 + 1, dtype=np.float64)
     g      = np.exp(-ax**2 / (2 * sigma**2))
     kernel = np.outer(g, g)
     return kernel / kernel.sum()
 
-
 def gaussian_filter(channel, size=5, sigma=1.0):
     return convolve2d(channel, gaussian_kernel(size, sigma))
 
-
 def denoise(channel):
-    """
-    Tahap 1: Median 7x7  → hapus salt-and-pepper noise (noise impulsif)
-    Tahap 2: Gaussian 5x5 → haluskan sisa Gaussian noise
-    Kernel besar (7x7) dipilih agar noise padat pun tereliminasi.
-    """
     step1 = median_filter(channel, k=7)
     step2 = gaussian_filter(step1, size=5, sigma=1.2)
     return step2
 
-
 # ===========================================================
 # LANGKAH 2 — CLAHE MANUAL
-# Kenapa CLAHE, bukan Global Histogram Equalization?
-#   Global HE meng-stretch SEMUA bin termasuk bin noise yang kecil
-#   → noise ter-amplifikasi → gambar tampak berbintik/granuler.
-#   CLAHE: histogram di-clip terlebih dahulu sebelum CDF dihitung
-#   → kontras naik tapi noise tidak meledak.
-#   Ditambah: equalization hanya pada kanal Y (luminance) agar
-#   warna asli (Cr, Cb) tidak bergeser.
 # ===========================================================
 
 def clahe_single(channel, clip_limit=3.0, tile_grid=(8, 8)):
-    """
-    CLAHE manual per-tile dengan bilinear interpolation.
 
-    Per tile:
-      1. Hitung histogram tile
-      2. Clip bin > clip_limit x rata-rata, distribusikan sisa merata
-      3. Hitung CDF → LUT normalisasi [0,255]
-      4. Petakan piksel via LUT
-    Bilinear interpolation menghilangkan batas keras antar tile.
-    """
     H, W   = channel.shape
     tH, tW = tile_grid
     th     = int(np.ceil(H / tH))
@@ -163,7 +136,6 @@ def apply_clahe_color(bgr_img, clip_limit=3.0):
 
     return np.clip(np.stack([B_o, G_o, R_o], axis=2), 0, 255).astype(np.uint8)
 
-
 # ===========================================================
 # LANGKAH 3 — SHARPENING (Unsharp Masking)
 # ===========================================================
@@ -177,9 +149,8 @@ def unsharp_mask(channel, strength=1.2, blur_size=5, blur_sigma=1.0):
     high_freq = channel.astype(np.float64) - blurred.astype(np.float64)
     return np.clip(channel.astype(np.float64) + strength * high_freq, 0, 255).astype(np.uint8)
 
-
 # ===========================================================
-# PIPELINE UTAMA
+# MAIN PIPELINE
 # ===========================================================
 
 def restore(bgr_img):
@@ -253,7 +224,6 @@ def main():
     print(f"\n[✓] Tersimpan: {output_path}")
 
     plot_results(img, denoised, equalized, restored, 'output')
-
 
 if __name__ == '__main__':
     main()
