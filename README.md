@@ -38,7 +38,7 @@ Alur kerja restorasi pada proyek ini dirancang berjalan lurus dan sekuensial mel
 | :--- | :---: | :--- |
 | **Input**<br>(Citra Terdegradasi) | <img src="input/lena_noisy.png" width="250" alt="Input Noisy"> | **Kondisi:** Citra mengalami degradasi spasial dan intensitas secara simultan. Terdapat *salt-and-pepper noise* ekstrem, *Gaussian noise* kontinu, rentang kontras yang sangat sempit, serta detail fitur yang tumpul. |
 | **Tahap 1**<br>Denoising | <img src="output/median.png" width="250" alt="Tahap 1 Denoising"> | **Metode:** Median Filter (7x7) + Gaussian Filter (5x5, $\sigma=1.2$).<br>**Efek:** Noise impulsif berhasil dihancurkan tanpa tersisa, dan butiran Gaussian merata. Namun, operasi spasial ini mengorbankan frekuensi tinggi, menyebabkan citra mengalami *blur* struktural. |
-| **Tahap 2**<br>Equalization (CLAHE) | <img src="output/histogram_equalized.png" width="250" alt="Tahap 2 CLAHE"> | **Metode:** CLAHE manual per-*tile* (8x8) murni pada kanal Luma (Y) di ruang YCrCb, dijahit dengan interpolasi bilinear.<br>**Efek:** Distribusi intensitas menjadi optimal. Detail bayangan dan *highlight* terekspos tanpa memicu *color shifting* atau memecah citra menjadi artefak kotak-kotak (*blocky*). |
+| **Tahap 2**<br>Equalization (CLAHE) | <img src="output/histogram_equalization.png" width="250" alt="Tahap 2 CLAHE"> | **Metode:** CLAHE manual per-*tile* (8x8) murni pada kanal Luma (Y) di ruang YCrCb, dijahit dengan interpolasi bilinear.<br>**Efek:** Distribusi intensitas menjadi optimal. Detail bayangan dan *highlight* terekspos tanpa memicu *color shifting* atau memecah citra menjadi artefak kotak-kotak (*blocky*). |
 | **Tahap 3**<br>Sharpening | <img src="output/lena_restored.png" width="250" alt="Tahap 3 Sharpening"> | **Metode:** *Unsharp Masking* (Citra Denoised + 1.2 $\times$ Mask Frekuensi Tinggi).<br>**Efek:** Tepi objek (*edges*) dan batas tekstur kembali ditegaskan. Proses ini secara efektif mengompensasi hilangnya ketajaman spasial yang diakibatkan oleh penyapuan filter di Tahap 1. |
 
 ---
@@ -46,7 +46,8 @@ Alur kerja restorasi pada proyek ini dirancang berjalan lurus dan sekuensial mel
 ## 5. Hasil Dan Analisis Teknik
 
 Panel di bawah ini menyajikan bukti empiris makro dari progresi piksel dan distribusi intensitas (histogram) pada setiap akhir komputasi utama. Evaluasi analitis pada subbab-subbab berikutnya akan secara langsung merujuk pada pergeseran anomali dan struktur dari visualisasi ini.
-<img src="output/pipeline_analysis.png" width="250" alt="Tahap 1 Denoising">
+
+<img src="output/pipeline_analysis.png" width="1000" alt="Tahap 1 Denoising">
 
 
 ### A. Tahap Denoising
