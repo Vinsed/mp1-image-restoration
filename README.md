@@ -25,14 +25,29 @@ Proyek ini bertujuan merestorasi citra (seperti foto Lena) yang terdegradasi sec
 - Matplotlib
 
 ## 3. Cara Build dan Run Project
-Untuk menjalankan proyek ini, tahap pertama adalah memastikan seluruh pustaka yang dibutuhkan telah terinstal dengan menjalankan perintah `pip install opencv-python numpy matplotlib` pada terminal. Selanjutnya, pastikan struktur direktori kerja Anda sudah benar, di mana skrip `restoration.py` berada di akar direktori, didampingi oleh folder `input/` yang berisi citra rusak seperti `lena_noisy.png`, serta sebuah folder `output/` untuk menampung hasil pemrosesan. Setelah persiapan selesai, eksekusi *pipeline* utama dengan menjalankan perintah `python restoration.py`. Sistem akan memproses citra melalui seluruh tahapan secara berurutan dan menyimpan citra hasil restorasi beserta panel komparatif visualnya ke dalam direktori keluaran.
+Untuk menjalankan proyek ini, tahap pertama adalah memastikan seluruh pustaka yang dibutuhkan telah terinstal dengan menjalankan perintah 
+```bash
+pip install opencv-python numpy matplotlib
+```
+pada terminal. Selanjutnya, pastikan struktur direktori kerja Anda sudah benar, di mana skrip `restoration.py` berada di akar direktori, didampingi oleh folder `input/` yang berisi citra rusak seperti `lena_noisy.png`, serta sebuah folder `output/` untuk menampung hasil pemrosesan. Setelah persiapan selesai, eksekusi *pipeline* utama dengan menjalankan perintah `python restoration.py`. Sistem akan memproses citra melalui seluruh tahapan secara berurutan dan menyimpan citra hasil restorasi beserta panel komparatif visualnya ke dalam direktori keluaran.
 
 ## 4. Restoration Pipeline
 Alur kerja restorasi pada proyek ini dirancang berjalan lurus dan sekuensial melalui tiga tahapan utama. Tahap pertama difokuskan pada *denoising* gabungan, di mana citra disapu menggunakan Median Filter untuk menghilangkan noise impulsif, lalu diperhalus menggunakan Gaussian Filter. Citra yang telah bersih dari noise kemudian masuk ke tahap kedua, yaitu *Contrast Limited Adaptive Histogram Equalization* (CLAHE). Pada tahap ini, kontras citra dinaikkan secara lokal khusus pada ruang warna Luminance (Y) agar akurasi warna asli tetap terjaga. Sebagai penutup, tahap ketiga menerapkan *Unsharp Masking* untuk memulihkan detail batas objek dan ketajaman frekuensi tinggi yang sempat tereduksi akibat proses penghalusan di tahap pertama.
 
+| Tahapan | Visualisasi Citra | Analisis Transformasi |
+| :--- | :---: | :--- |
+| **Input**<br>(Citra Terdegradasi) | <img src="input/lena_noisy.png" width="250" alt="Input Noisy"> | **Kondisi:** Citra mengalami degradasi spasial dan intensitas secara simultan. Terdapat *salt-and-pepper noise* ekstrem, *Gaussian noise* kontinu, rentang kontras yang sangat sempit, serta detail fitur yang tumpul. |
+| **Tahap 1**<br>Denoising | <img src="output/median.png" width="250" alt="Tahap 1 Denoising"> | **Metode:** Median Filter (7x7) + Gaussian Filter (5x5, $\sigma=1.2$).<br>**Efek:** Noise impulsif berhasil dihancurkan tanpa tersisa, dan butiran Gaussian merata. Namun, operasi spasial ini mengorbankan frekuensi tinggi, menyebabkan citra mengalami *blur* struktural. |
+| **Tahap 2**<br>Equalization (CLAHE) | <img src="output/histogram_equalized.png" width="250" alt="Tahap 2 CLAHE"> | **Metode:** CLAHE manual per-*tile* (8x8) murni pada kanal Luma (Y) di ruang YCrCb, dijahit dengan interpolasi bilinear.<br>**Efek:** Distribusi intensitas menjadi optimal. Detail bayangan dan *highlight* terekspos tanpa memicu *color shifting* atau memecah citra menjadi artefak kotak-kotak (*blocky*). |
+| **Tahap 3**<br>Sharpening | <img src="output/lena_restored.png" width="250" alt="Tahap 3 Sharpening"> | **Metode:** *Unsharp Masking* (Citra Denoised + 1.2 $\times$ Mask Frekuensi Tinggi).<br>**Efek:** Tepi objek (*edges*) dan batas tekstur kembali ditegaskan. Proses ini secara efektif mengompensasi hilangnya ketajaman spasial yang diakibatkan oleh penyapuan filter di Tahap 1. |
+
 ---
 
 ## 5. Hasil Dan Analisis Teknik
+
+Panel di bawah ini menyajikan bukti empiris makro dari progresi piksel dan distribusi intensitas (histogram) pada setiap akhir komputasi utama. Evaluasi analitis pada subbab-subbab berikutnya akan secara langsung merujuk pada pergeseran anomali dan struktur dari visualisasi ini.
+<img src="output/pipeline_analysis.png" width="250" alt="Tahap 1 Denoising">
+
 
 ### A. Tahap Denoising
 Citra awal mengalami degradasi parah akibat dua jenis noise yang saling tumpang tindih: *salt-and-pepper noise* yang merusak struktur spasial dengan piksel ekstrem bernilai 0 atau 255, serta *Gaussian noise* yang menyebar sebagai butiran halus di seluruh permukaan. Untuk mengatasi masalah ganda ini, diterapkan pendekatan sekuensial yang dimulai dengan Median Filter berukuran kernel agresif 7x7, dilanjutkan dengan Gaussian Filter berukuran 5x5 dengan nilai sigma 1.2. Pemilihan metode ini dilandasi oleh fakta matematis bahwa filter linear seperti rata-rata (*mean*) akan gagal total dan justru menyebarkan nilai *outlier* ekstrem menjadi noda buram. Oleh karena itu, sifat non-linear Median Filter menjadi keharusan untuk mengeliminasi nilai impulsif. Setelah noise ekstrem ini hancur, barulah Gaussian filter dapat bekerja meratakan sisa fluktuasi acak. Walaupun kernel 7x7 terbukti ampuh menyapu bersih noise padat, pendekatan ini membawa cacat inheren karena sifatnya yang destruktif terhadap integritas geometri asli citra. Sebagai evaluasi, implementasi *Adaptive Median Filter*—di mana operasi spasial hanya dieksekusi secara reaktif pada piksel yang terdeteksi cacat (0/255) tanpa mengganggu piksel yang sehat—akan menjadi kerangka solusi yang jauh lebih ketat dan dapat dipertanggungjawabkan secara matematis.
