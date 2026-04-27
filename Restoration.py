@@ -220,7 +220,9 @@ def main():
 
     denoised, equalized, restored = restore(img)
 
-    cv2.imwrite(output_path, restored)
+    cv2.imwrite('output/1_denoised.png', denoised)
+    cv2.imwrite('output/2_equalized.png', equalized)
+    cv2.imwrite('output/lena_restored.png', restored)
     print(f"\n[✓] Tersimpan: {output_path}")
 
     plot_results(img, denoised, equalized, restored, 'output')
